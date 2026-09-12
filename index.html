@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Прайс-калькулятор СТО</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1B1D21; --panel: #24272C; --panel-2: #2B2F35; --line: #383C42;
+    --text: #EDEEEF; --text-dim: #9BA1A8; --amber: #E8A33D; --green: #6FCB9F; --red: #E27A6B; --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 22px 22px;
+    color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; line-height: 1.5; min-height: 100vh;
+  }
+  h1,h2,h3{ font-family:'Space Grotesk', sans-serif; margin:0; }
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+  header{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:24px; border-bottom: 1px solid var(--line); padding-bottom:20px; }
+  header .title-block{ display:flex; align-items:center; gap:12px; }
+  .gear{ width:38px; height:38px; border-radius:9px; background: linear-gradient(155deg, var(--amber), #C97A1F); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+  header h1{ font-size:20px; font-weight:700; letter-spacing:0.2px; }
+  header .subtitle{ color:var(--text-dim); font-size:12.5px; margin-top:2px; }
+  .headerbtns{ display:flex; gap:8px; flex-wrap:wrap; }
+  button{ font-family:'IBM Plex Sans', sans-serif; font-size:13px; cursor:pointer; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); padding:9px 14px; transition: border-color .15s, background .15s; }
+  button:hover{ border-color:#54595F; background:#31353B; }
+  button.primary{ background: var(--amber); border-color:var(--amber); color:#1B1D21; font-weight:600; }
+  button.primary:hover{ background:#F0AE4E; }
+  button.ghost{ background:transparent; }
+  button.small{ padding:5px 9px; font-size:12px; }
+  button.icon-btn{ padding:5px 8px; font-size:13px; line-height:1; }
+  .grid{ display:grid; grid-template-columns: 1.15fr 1fr; gap:20px; align-items:start; }
+  @media (max-width: 880px){ .grid{ grid-template-columns: 1fr; } }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width: 520px){ .two-col{ grid-template-columns:1fr; } }
+  .card{ background: var(--panel); border:1px solid var(--line); border-radius: var(--radius); padding:18px 18px 20px; overflow:visible; }
+  .card + .card{ margin-top:16px; }
+  .card h2{ font-size:14px; color: var(--text-dim); font-weight:600; margin-bottom:12px; }
+  input[type=text], input[type=number], select{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-family:'IBM Plex Sans', sans-serif; font-size:14px; outline:none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus{ border-color: var(--amber); }
+  label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; }
+  .field{ margin-bottom:0; }
+  .combo{ position:relative; }
+  .combo.full{ margin-bottom:6px; }
+  .results{
+    max-height:280px; overflow-y:auto; border-radius:8px; border: 1px solid var(--line);
+    position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:40;
+    background: var(--panel); box-shadow: 0 12px 28px rgba(0,0,0,0.45); display:none;
+  }
+  .results.open{ display:block; }
+  .result-row{ padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .result-row:last-child{ border-bottom:none; }
+  .result-row:hover{ background: var(--panel-2); }
+  .result-row.selected{ background: rgba(232,163,61,0.14); }
+  .result-row .rname{ font-weight:500; }
+  .result-row .rmeta{ color:var(--text-dim); font-size:12px; white-space:nowrap; display:flex; align-items:center; gap:8px; }
+  .tag{ font-size:11px; padding:2px 8px; border-radius:20px; border:1px solid var(--line); color: var(--text-dim); white-space:nowrap; }
+  .tag.econom{ color:#8FBF7A; border-color:#3D5C34; }
+  .tag.standard{ color:#7AAEDF; border-color:#33526E; }
+  .tag.business{ color:#C9A2E8; border-color:#5A4270; }
+  .tag.premium{ color:#E8A33D; border-color:#7A5A25; }
+  .tag.electro{ color:#6FCFCB; border-color:#2E5A58; }
+  .empty-hint{ color:var(--text-dim); font-size:12.5px; padding:12px; text-align:center; }
+  .edit-row{ display:flex; align-items:center; gap:6px; padding:9px 12px; border-bottom:1px solid var(--line); background:var(--panel-2); }
+  .edit-row input{ width:80px; }
+  .edit-row .rname{ flex:1; font-weight:500; font-size:13px; }
+  .calc-line{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px dashed var(--line); gap:10px; }
+  .calc-line:last-of-type{ border-bottom:none; }
+  .calc-line .l{ color:var(--text-dim); font-size:13px; }
+  .calc-line .v{ font-family:'IBM Plex Mono', monospace; font-weight:500; }
+  .calc-line input[type=number]{ width:110px; text-align:right; font-family:'IBM Plex Mono', monospace; }
+  .total-box{ margin-top:16px; padding:18px; border-radius:10px; background: linear-gradient(155deg, rgba(111,203,159,0.12), rgba(111,203,159,0.03)); border:1px solid #35503F; display:flex; justify-content:space-between; align-items:center; }
+  .total-box .l{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14px; }
+  .total-box .v{ font-family:'IBM Plex Mono', monospace; font-size:26px; font-weight:600; color: var(--green); }
+  .selected-summary{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; font-size:13px; }
+  .selected-summary .row{ display:flex; justify-content:space-between; padding:3px 0; }
+  .selected-summary .row .l{ color:var(--text-dim); }
+  .placeholder-note{ color:var(--text-dim); font-size:12.5px; padding:6px 2px 2px; }
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal-overlay.open{ display:flex; }
+  .modal{ background: var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px; width:100%; max-width:460px; max-height:85vh; overflow-y:auto; }
+  .modal h3{ font-size:16px; margin-bottom:16px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+  .modal .field{ margin-bottom:14px; }
+  .rates-grid{ display:grid; grid-template-columns: 1fr auto auto; gap:8px 12px; align-items:center; font-size:13px; }
+  .rates-grid .rh{ color:var(--text-dim); font-size:11.5px; padding-bottom:4px; }
+  .rates-grid input{ width:90px; text-align:right; font-family:'IBM Plex Mono',monospace; }
+  .status-msg{ font-size:12px; color:var(--green); min-height:16px; margin-top:8px; }
+  .footnote{ color:var(--text-dim); font-size:12px; margin-top:26px; line-height:1.6; border-top:1px solid var(--line); padding-top:16px;}
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:#3A3E44; border-radius:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title-block">
+      <div class="gear">⚙</div>
+      <div><h1>Прайс-калькулятор СТО</h1><div class="subtitle">Ваша рабочая база — марки, модели и виды работ</div></div>
+    </div>
+    <div class="headerbtns">
+      <span id="saveStatus" style="font-size:12px; color:var(--text-dim); align-self:center; margin-right:4px;"></span>
+      <button class="ghost" id="btnRates">Ставки нормо-часа</button>
+      <button class="ghost" id="btnAddCar">+ Марка/модель</button>
+      <button class="ghost" id="btnAddWork">+ Вид работы</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>1. Найдите автомобиль</h2>
+        <div class="two-col">
+          <div class="combo" id="brandCombo">
+            <label>Марка</label>
+            <input type="text" id="brandSearch" placeholder="Нажмите или начните вводить…" autocomplete="off">
+            <div class="results" id="brandResults"></div>
+          </div>
+          <div class="combo" id="modelCombo">
+            <label>Модель</label>
+            <input type="text" id="modelSearch" placeholder="Нажмите или начните вводить…" autocomplete="off">
+            <div class="results" id="carResults"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2. Найдите вид работы</h2>
+        <div class="combo full" id="workCombo">
+          <input type="text" id="workSearch" placeholder="Нажмите или начните вводить работу…" autocomplete="off">
+          <div class="results" id="workResults"></div>
+        </div>
+        <div class="placeholder-note">Нашли работу с неверным названием или ценой? Нажмите ✎ рядом с ней, чтобы поправить название, нормо-часы или удалить её.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Расчёт для клиента</h2>
+        <div class="selected-summary">
+          <div class="row"><span class="l">Автомобиль</span><span id="sumCar">— не выбран —</span></div>
+          <div class="row"><span class="l">Класс сложности</span><span id="sumClass">—</span></div>
+          <div class="row"><span class="l">Работа</span><span id="sumWork">— не выбрана —</span></div>
+          <div class="row"><span class="l">Нормо-часы</span><span id="sumHours">—</span></div>
+        </div>
+        <div class="calc-line"><span class="l">Ставка нормо-часа</span><span class="v" id="calcRate">—</span></div>
+        <div class="calc-line"><span class="l">Стоимость работы</span><span class="v" id="calcLabor">—</span></div>
+        <div class="calc-line"><span class="l">Стоимость запчастей, грн</span><input type="number" id="partsCost" value="0" min="0"></div>
+        <div class="calc-line"><span class="l">Наценка на запчасти, %</span><input type="number" id="partsMarkup" value="15" min="0"></div>
+        <div class="total-box"><span class="l">Итого для клиента</span><span class="v" id="calcTotal">0 грн</span></div>
+        <div class="placeholder-note">Озвучивайте как ориентир — финальная цена после осмотра машины.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote" id="footnote"></div>
+</div>
+
+<div class="modal-overlay" id="ratesOverlay">
+  <div class="modal">
+    <h3>Ставки нормо-часа по классам</h3>
+    <div class="field"><label>Базовая ставка (Эконом-класс), грн/час</label><input type="number" id="baseRate" min="0"></div>
+    <div class="rates-grid" id="ratesGrid"></div>
+    <div class="modal-actions"><button class="ghost" id="closeRates">Отмена</button><button class="primary" id="saveRates">Сохранить</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="carOverlay">
+  <div class="modal">
+    <h3>Добавить марку / модель</h3>
+    <div class="field"><label>Марка</label><input type="text" id="newBrand" placeholder="напр. Toyota"></div>
+    <div class="field"><label>Модель</label><input type="text" id="newModel" placeholder="напр. Camry"></div>
+    <div class="field"><label>Класс сложности</label><select id="newCarClass"></select></div>
+    <div class="status-msg" id="carStatus"></div>
+    <div class="modal-actions"><button class="ghost" id="closeCar">Отмена</button><button class="primary" id="saveCar">Добавить</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="workOverlay">
+  <div class="modal">
+    <h3>Добавить вид работы</h3>
+    <div class="field"><label>Категория</label><input type="text" id="newCategory" placeholder="напр. Двигатель"></div>
+    <div class="field"><label>Название работы</label><input type="text" id="newWorkName" placeholder="напр. Замена термостата"></div>
+    <div class="field"><label>Нормо-часы</label><input type="number" id="newHours" step="0.1" min="0" placeholder="напр. 1.0"></div>
+    <div class="status-msg" id="workStatus"></div>
+    <div class="modal-actions"><button class="ghost" id="closeWork">Отмена</button><button class="primary" id="saveWork">Добавить</button></div>
+  </div>
+</div>
+
+<script>
+const CLASSES = {
+  econom:   { label: "Эконом",         coef: 1.0 },
+  standard: { label: "Стандарт",       coef: 1.2 },
+  business: { label: "Бизнес",         coef: 1.5 },
+  premium:  { label: "Премиум",        coef: 2.0 },
+  electro:  { label: "Электро/Гибрид", coef: 1.8 },
+};
+let baseRate = 500;
+
+const BUILTIN_CARS = [
+["ВАЗ (Lada)","Granta","econom"],["ВАЗ (Lada)","Vesta","econom"],["ВАЗ (Lada)","Priora","econom"],["ВАЗ (Lada)","2107","econom"],["ВАЗ (Lada)","2110","econom"],["ВАЗ (Lada)","2114","econom"],["ВАЗ (Lada)","Niva","econom"],["ВАЗ (Lada)","Kalina","econom"],
+["Daewoo","Lanos","econom"],["Daewoo","Sens","econom"],["Daewoo","Nexia","econom"],["Daewoo","Matiz","econom"],["Daewoo","Gentra","econom"],
+["ZAZ","Slavuta","econom"],["ZAZ","Sens","econom"],["ZAZ","Chance","econom"],["ZAZ","Lanos","econom"],
+["Chevrolet","Aveo","econom"],["Chevrolet","Lacetti","econom"],["Chevrolet","Cobalt","econom"],["Chevrolet","Spark","econom"],
+["Renault","Logan","econom"],["Renault","Sandero","econom"],["Renault","Clio","econom"],["Renault","Megane","econom"],
+["Dacia","Logan","econom"],["Dacia","Duster","econom"],["Dacia","Sandero","econom"],
+["Geely","CK","econom"],["Geely","MK","econom"],["Geely","Emgrand","econom"],["Geely","MK Cross","econom"],
+["Chery","Tiggo","econom"],["Chery","QQ","econom"],["Chery","Amulet","econom"],["Chery","Bonus","econom"],
+["Fiat","Albea","econom"],["Fiat","Punto","econom"],["Fiat","Doblo","econom"],["Fiat","Panda","econom"],
+["Skoda","Fabia","econom"],
+["Datsun","on-DO","econom"],["Datsun","mi-DO","econom"],
+["Ravon","R2","econom"],["Ravon","Nexia R3","econom"],["Ravon","Gentra","econom"],
+["UAZ","Patriot","econom"],["UAZ","Hunter","econom"],
+["GAZ","Volga","econom"],["GAZ","Sobol","econom"],
+["Moskvich","2141","econom"],["Moskvich","412","econom"],
+["Lifan","Solano","econom"],["Lifan","X60","econom"],["Lifan","Smily","econom"],
+["JAC","J3","econom"],["JAC","J5","econom"],
+["FAW","Vita","econom"],
+["Wuling","Sunshine","econom"],
+["BYD","F3","econom"],
+["Smart","Fortwo","econom"],
+["Opel","Astra","standard"],["Opel","Corsa","standard"],["Opel","Vectra","standard"],["Opel","Insignia","standard"],["Opel","Zafira","standard"],["Opel","Meriva","standard"],["Opel","Mokka","standard"],
+["Volkswagen","Golf","standard"],["Volkswagen","Passat","standard"],["Volkswagen","Jetta","standard"],["Volkswagen","Polo","standard"],["Volkswagen","Tiguan","standard"],["Volkswagen","Touran","standard"],["Volkswagen","Caddy","standard"],
+["Skoda","Octavia","standard"],["Skoda","Rapid","standard"],["Skoda","Superb","standard"],["Skoda","Yeti","standard"],["Skoda","Karoq","standard"],["Skoda","Kodiaq","standard"],
+["Toyota","Corolla","standard"],["Toyota","Camry","standard"],["Toyota","RAV4","standard"],["Toyota","Avensis","standard"],["Toyota","Auris","standard"],["Toyota","Yaris","standard"],["Toyota","C-HR","standard"],
+["Hyundai","Elantra","standard"],["Hyundai","Tucson","standard"],["Hyundai","i30","standard"],["Hyundai","Accent","standard"],["Hyundai","Santa Fe","standard"],["Hyundai","Sonata","standard"],["Hyundai","Creta","standard"],
+["Kia","Ceed","standard"],["Kia","Sportage","standard"],["Kia","Rio","standard"],["Kia","Sorento","standard"],["Kia","Cerato","standard"],["Kia","Optima","standard"],["Kia","Seltos","standard"],
+["Ford","Focus","standard"],["Ford","Fusion","standard"],["Ford","Mondeo","standard"],["Ford","Kuga","standard"],["Ford","Fiesta","standard"],["Ford","EcoSport","standard"],["Ford","Transit","standard"],["Ford","Transit Custom","standard"],
+["Nissan","Qashqai","standard"],["Nissan","Almera","standard"],["Nissan","X-Trail","standard"],["Nissan","Note","standard"],["Nissan","Juke","standard"],["Nissan","Tiida","standard"],["Nissan","Sentra","standard"],
+["Mazda","3","standard"],["Mazda","6","standard"],["Mazda","CX-5","standard"],["Mazda","2","standard"],["Mazda","CX-3","standard"],
+["Honda","Civic","standard"],["Honda","CR-V","standard"],["Honda","Accord","standard"],["Honda","HR-V","standard"],
+["Mitsubishi","Lancer","standard"],["Mitsubishi","Outlander","standard"],["Mitsubishi","ASX","standard"],["Mitsubishi","Eclipse Cross","standard"],
+["Peugeot","308","standard"],["Peugeot","407","standard"],["Peugeot","3008","standard"],["Peugeot","508","standard"],["Peugeot","2008","standard"],["Peugeot","Boxer","standard"],["Peugeot","Partner","standard"],
+["Citroen","C4","standard"],["Citroen","C5","standard"],["Citroen","Berlingo","standard"],["Citroen","C3","standard"],["Citroen","Jumper","standard"],
+["Subaru","Forester","standard"],["Subaru","Impreza","standard"],["Subaru","Outback","standard"],["Subaru","XV","standard"],
+["Seat","Leon","standard"],["Seat","Ibiza","standard"],["Seat","Altea","standard"],["Seat","Arona","standard"],
+["Suzuki","Vitara","standard"],["Suzuki","SX4","standard"],["Suzuki","Swift","standard"],["Suzuki","Jimny","standard"],
+["Great Wall / Haval","H6","standard"],["Great Wall / Haval","Jolion","standard"],["Great Wall / Haval","F7","standard"],
+["SsangYong","Actyon","standard"],["SsangYong","Korando","standard"],["SsangYong","Rexton","standard"],["SsangYong","Tivoli","standard"],
+["Isuzu","D-Max","standard"],
+["Daihatsu","Terios","standard"],
+["MG","ZS","standard"],["MG","350","standard"],["MG","HS","standard"],
+["Lancia","Delta","standard"],["Lancia","Ypsilon","standard"],
+["Saab","9-3","standard"],["Saab","9-5","standard"],
+["Rover","75","standard"],
+["Mini","Cooper","standard"],["Mini","Countryman","standard"],
+["Jeep","Compass","standard"],["Jeep","Cherokee","standard"],["Jeep","Renegade","standard"],
+["Dodge","Journey","standard"],["Dodge","Caliber","standard"],
+["Scion","tC","standard"],
+["Iveco","Daily","standard"],
+["Mercedes-Benz","Sprinter","standard"],["Mercedes-Benz","Vito","standard"],
+["Fiat","Ducato","standard"],
+["Renault","Master","standard"],["Renault","Trafic","standard"],["Renault","Kangoo","standard"],
+["BMW","1-серия","business"],["BMW","3-серия","business"],["BMW","5-серия","business"],["BMW","X3","business"],
+["Mercedes-Benz","C-класс","business"],["Mercedes-Benz","E-класс","business"],["Mercedes-Benz","GLC","business"],
+["Audi","A3","business"],["Audi","A4","business"],["Audi","A6","business"],["Audi","Q5","business"],
+["Volvo","S60","business"],["Volvo","XC60","business"],["Volvo","V60","business"],
+["Land Rover","Discovery Sport","business"],["Land Rover","Freelander","business"],
+["Jaguar","XE","business"],["Jaguar","XF","business"],
+["Infiniti","Q50","business"],["Infiniti","QX50","business"],
+["Alfa Romeo","Giulia","business"],["Alfa Romeo","Stelvio","business"],
+["Genesis","G70","business"],["Genesis","G80","business"],
+["Jeep","Grand Cherokee","business"],
+["Chrysler","300C","business"],
+["Lincoln","MKZ","business"],["Lincoln","Continental","business"],
+["Acura","MDX","business"],["Acura","RDX","business"],
+["Buick","LaCrosse","business"],["Buick","Encore","business"],
+["Cadillac","CTS","business"],
+["DS","DS7 Crossback","business"],["DS","DS4","business"],
+["BMW","7-серия","premium"],["BMW","X5","premium"],["BMW","X6","premium"],["BMW","X7","premium"],
+["Mercedes-Benz","S-класс","premium"],["Mercedes-Benz","G-класс","premium"],["Mercedes-Benz","GLE","premium"],["Mercedes-Benz","GLS","premium"],["Mercedes-Benz","Maybach","premium"],
+["Porsche","Cayenne","premium"],["Porsche","Macan","premium"],["Porsche","Panamera","premium"],["Porsche","911","premium"],
+["Range Rover","Vogue","premium"],["Range Rover","Sport","premium"],["Range Rover","Velar","premium"],
+["Lexus","LX","premium"],["Lexus","LS","premium"],["Lexus","RX","premium"],["Lexus","GX","premium"],
+["Bentley","Continental","premium"],["Bentley","Bentayga","premium"],
+["Maserati","Ghibli","premium"],["Maserati","Levante","premium"],
+["Cadillac","Escalade","premium"],
+["Genesis","G90","premium"],
+["Rolls-Royce","Ghost","premium"],["Rolls-Royce","Phantom","premium"],
+["Aston Martin","DB11","premium"],
+["Lamborghini","Urus","premium"],
+["Tesla","Model 3","electro"],["Tesla","Model S","electro"],["Tesla","Model X","electro"],["Tesla","Model Y","electro"],
+["Toyota","Prius","electro"],["Toyota","Camry Hybrid","electro"],["Toyota","RAV4 Hybrid","electro"],
+["Hyundai","Ioniq","electro"],["Hyundai","Kona Electric","electro"],
+["Kia","Niro","electro"],["Kia","e-Niro","electro"],["Kia","Soul EV","electro"],
+["Nissan","Leaf","electro"],
+["BMW","i3","electro"],["BMW","i4","electro"],["BMW","iX","electro"],
+["Chevrolet","Bolt","electro"],["Chevrolet","Volt","electro"],
+["Mitsubishi","Outlander PHEV","electro"],
+["Volkswagen","ID.4","electro"],["Volkswagen","ID.3","electro"],["Volkswagen","e-Golf","electro"],
+["Mercedes-Benz","EQC","electro"],
+["Audi","e-tron","electro"],["Audi","Q4 e-tron","electro"],
+["Renault","Zoe","electro"],
+["Skoda","Enyaq","electro"],
+["Porsche","Taycan","electro"],
+["Volvo","XC40 Recharge","electro"],
+["Mazda","MX-30","electro"],
+["Honda","e","electro"],
+["Fiat","500e","electro"],
+["Peugeot","e-208","electro"],
+["Citroen","e-C4","electro"],
+["Opel","Corsa-e","electro"],
+["BYD","Han","electro"],["BYD","Tang","electro"],
+["MG","MG4","electro"],["MG","MG5 EV","electro"],
+];
+
+const BUILTIN_WORKS = [
+["ТО","Замена масла ДВС + масляный фильтр",0.7],["ТО","Замена воздушного фильтра",0.2],["ТО","Замена салонного фильтра",0.2],
+["ТО","Замена топливного фильтра",0.5],["ТО","Замена свечей зажигания (комплект)",0.8],["ТО","Замена свечей накала (дизель, комплект)",1.0],
+["ТО","Комплексное ТО (регламент)",2.5],["ТО","Замена антифриза (охлаждающей жидкости)",1.0],["ТО","Замена ремня генератора",0.5],
+["ТО","Замена приводного ремня (комплект)",1.0],["ТО","Замена жидкости ГУР",0.5],
+["Тормоза","Замена колодок (одна ось)",1.0],["Тормоза","Замена дисков + колодок (одна ось)",1.5],["Тормоза","Замена тормозной жидкости",0.7],
+["Тормоза","Замена суппорта (1 шт)",1.2],["Тормоза","Замена тормозных шлангов",1.0],["Тормоза","Ремонт ручного тормоза",1.3],
+["Тормоза","Замена ABS-датчика",0.7],["Тормоза","Прокачка тормозной системы",0.5],["Тормоза","Замена главного тормозного цилиндра",1.2],
+["Тормоза","Замена вакуумного усилителя тормозов",1.5],["Тормоза","Замена троса ручника",1.0],["Тормоза","Шлифовка тормозных дисков",0.8],
+["Подвеска","Замена амортизатора (1 шт)",1.0],["Подвеска","Замена стойки стабилизатора (1 шт)",0.6],["Подвеска","Замена шаровой опоры (1 шт)",1.3],
+["Подвеска","Замена рычага подвески (1 шт)",1.5],["Подвеска","Замена сайлентблоков (комплект)",2.0],["Подвеска","Замена пружины (1 шт)",1.2],
+["Подвеска","Замена опоры амортизатора (1 шт)",0.8],["Подвеска","Замена пыльника ШРУСа",1.0],["Подвеска","Замена втулок стабилизатора",0.8],
+["Подвеска","Замена подрамника",3.0],
+["Ходовая","Развал-схождение (3D, все колёса)",1.0],["Ходовая","Регулировка развала (только перед)",0.6],["Ходовая","Регулировка схождения (только перед)",0.6],
+["Ходовая","Замена подшипника ступицы (1 шт)",1.5],["Ходовая","Замена ступицы в сборе",1.8],["Ходовая","Замена пыльника рулевой рейки",1.0],
+["Двигатель","Замена ремня ГРМ + ролики",3.0],["Двигатель","Замена цепи ГРМ",5.0],["Двигатель","Замена прокладки клапанной крышки",1.5],
+["Двигатель","Замена прокладки ГБЦ / ремонт ГБЦ",6.0],["Двигатель","Замена помпы (водяного насоса)",2.0],["Двигатель","Замена термостата",1.0],
+["Двигатель","Замена масляного насоса",3.0],["Двигатель","Капитальный ремонт двигателя",20.0],["Двигатель","Замена прокладок поддона картера",1.5],
+["Двигатель","Замена клапанов (комплект)",8.0],["Двигатель","Регулировка клапанов",2.0],["Двигатель","Замена турбины",3.0],
+["Двигатель","Замена опоры двигателя (1 шт)",1.2],["Двигатель","Замена сальников коленвала",2.0],["Двигатель","Замена маслосъёмных колпачков",4.0],
+["Двигатель","Диагностика компрессии двигателя",1.0],["Двигатель","Замена прокладки впускного коллектора",1.5],["Двигатель","Промывка системы охлаждения",1.0],
+["Трансмиссия","Замена сцепления (комплект)",4.0],["Трансмиссия","Замена масла в АКПП с промывкой",2.0],["Трансмиссия","Замена масла в МКПП",0.8],
+["Трансмиссия","Ремонт / замена ШРУСа (1 шт)",1.5],["Трансмиссия","Замена сальников коробки передач",1.5],["Трансмиссия","Ремонт раздаточной коробки",5.0],
+["Трансмиссия","Замена вариатора (CVT)",6.0],["Трансмиссия","Ремонт МКПП",6.0],["Трансмиссия","Замена подшипника выжимного",1.5],
+["Трансмиссия","Замена маховика",2.0],
+["Электрика","Компьютерная диагностика",0.5],["Электрика","Замена стартера",1.3],["Электрика","Замена генератора",1.2],
+["Электрика","Диагностика и ремонт проводки (базовая)",1.5],["Электрика","Замена аккумулятора",0.3],["Электрика","Ремонт центрального замка",1.0],
+["Электрика","Замена реле/предохранителей",0.4],["Электрика","Ремонт стеклоподъёмника",1.2],["Электрика","Замена лямбда-зонда",0.7],
+["Электрика","Замена датчика коленвала",0.6],["Электрика","Замена датчика распредвала",0.6],["Электрика","Ремонт/замена блока управления двигателем",3.0],
+["Электрика","Установка сигнализации",3.0],["Электрика","Замена подушки безопасности",1.5],["Электрика","Ремонт круиз-контроля",1.5],
+["Электрика","Установка/ремонт магнитолы",1.0],["Электрика","Ремонт мотора стеклоподъёмника",1.3],["Электрика","Замена датчика парковки (1 шт)",0.4],
+["Кузов","Рихтовка элемента (1 деталь)",3.0],["Кузов","Покраска элемента (1 деталь)",2.5],["Кузов","Полировка кузова (весь авто)",3.0],
+["Кузов","Замена бампера",1.5],["Кузов","Удаление вмятины без покраски (1 деталь)",1.5],["Кузов","Антикоррозийная обработка (весь авто)",4.0],
+["Кузов","Замена двери (1 шт)",2.0],["Кузов","Замена капота",1.5],["Кузов","Замена крыла",1.2],["Кузов","Ремонт порога (сварка)",3.0],
+["Кузов","Замена петель двери",1.0],["Кузов","Замена решётки радиатора",0.5],["Кузов","Восстановление геометрии кузова (стапель)",5.0],
+["Кузов","Замена лонжерона (сварка)",6.0],
+["Кондиционер","Заправка кондиционера",0.8],["Кондиционер","Диагностика и ремонт компрессора",2.0],["Кондиционер","Замена радиатора кондиционера",1.8],
+["Кондиционер","Чистка/дезинфекция системы вентиляции",0.5],
+["Шиномонтаж","Замена/перестановка комплекта колёс",0.5],["Шиномонтаж","Балансировка (1 колесо)",0.2],["Шиномонтаж","Ремонт прокола шины",0.4],
+["Шиномонтаж","Замена комплекта резины (4 шт)",1.0],["Шиномонтаж","Ремонт диска (сварка)",1.0],["Шиномонтаж","Установка датчиков давления (комплект)",1.0],
+["Топливная система","Замена топливного насоса",1.5],["Топливная система","Чистка форсунок (комплект)",2.0],["Топливная система","Замена форсунки (1 шт)",1.0],
+["Топливная система","Ремонт топливной рампы",1.5],["Топливная система","Замена сажевого фильтра (DPF)",2.0],["Топливная система","Чистка адсорбера",1.0],
+["Рулевое управление","Замена рулевой рейки",2.5],["Рулевое управление","Замена наконечника рулевой тяги (1 шт)",0.8],["Рулевое управление","Замена насоса ГУР",1.5],
+["Рулевое управление","Регулировка рулевой колонки",0.5],
+["Выхлопная система","Замена глушителя",1.0],["Выхлопная система","Замена катализатора",1.5],["Выхлопная система","Ремонт выхлопной системы (сварка)",1.2],
+["Стёкла и оптика","Замена лобового стекла",1.5],["Стёкла и оптика","Замена фары (1 шт)",0.5],["Стёкла и оптика","Полировка фар (2 шт)",1.0],
+["Стёкла и оптика","Замена дворников",0.2],["Стёкла и оптика","Замена заднего стекла",1.2],["Стёкла и оптика","Замена бокового зеркала",0.5],
+["Стёкла и оптика","Замена стекла двери",1.0],["Стёкла и оптика","Тонировка стёкол (весь авто)",2.0],["Стёкла и оптика","Регулировка света фар",0.3],
+["Салон","Ремонт сиденья (перетяжка)",3.0],["Салон","Замена обшивки двери",1.0],["Салон","Ремонт торпеды/панели",2.0],
+["Отопление","Замена радиатора печки",3.0],["Отопление","Замена моторчика печки",1.5],["Отопление","Ремонт заслонок печки",1.0],
+["ГБО","Установка ГБО (комплект)",8.0],["ГБО","Диагностика/настройка ГБО",1.0],["ГБО","Замена форсунок ГБО",1.5],["ГБО","Замена редуктора ГБО",1.2],["ГБО","Замена клапана ГБО",0.8],
+["Диагностика","Диагностика подвески",0.5],["Диагностика","Диагностика двигателя (расширенная)",1.0],["Диагностика","Диагностика перед покупкой авто",1.5],
+["Диагностика","Диагностика кондиционера",0.5],["Диагностика","Диагностика систем безопасности (Airbag)",0.7],["Диагностика","Диагностика иммобилайзера",0.8],
+["Доп. услуги","Мойка кузова",0.5],["Доп. услуги","Химчистка салона",2.0],["Доп. услуги","Нанесение защитного покрытия (керамика)",3.0],["Доп. услуги","Бронирование плёнкой (частично)",2.0],
+["Электро/Гибрид","Диагностика высоковольтной батареи",1.5],["Электро/Гибрид","Обслуживание системы охлаждения батареи",1.2],
+["Электро/Гибрид","Диагностика и калибровка BMS",2.0],["Электро/Гибрид","Замена модуля батареи",4.0],
+["Электро/Гибрид","Диагностика зарядного модуля (OBC)",1.5],["Электро/Гибрид","Замена кабеля зарядки",0.5],["Электро/Гибрид","Замена высоковольтных кабелей",1.5],
+];
+
+let customCars = [];
+let customWorks = [];
+let workOverrides = {};
+let selectedBrand = null;
+let selectedCar = null;
+let selectedWork = null;
+
+function workKey(source, idx){ return source + ':' + idx; }
+function escapeAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ==== Firebase / Firestore ====
+// Вставьте сюда конфигурацию вашего проекта из Firebase Console
+// (Project settings -> General -> Your apps -> SDK setup and configuration).
+const firebaseConfig = {
+  apiKey: "AIzaSyDWVp2E_reSDk3xKz8yjWtsP2bxRkO5X_s",
+  authDomain: "price-fa33c.firebaseapp.com",
+  projectId: "price-fa33c",
+  storageBucket: "price-fa33c.firebasestorage.app",
+  messagingSenderId: "45093198908",
+  appId: "1:45093198908:web:12275cca937da95d3ff739"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+let _fbReady = null;
+function ensureFirebase(){
+  if(!_fbReady){
+    _fbReady = (async () => {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js');
+      const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      return { docRef: doc(db, 'sto-calculator', 'state'), getDoc, setDoc };
+    })();
+  }
+  return _fbReady;
+}
+
+function showSaveStatus(msg, isError){
+  const el = document.getElementById('saveStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--text-dim)';
+  clearTimeout(showSaveStatus._t);
+  showSaveStatus._t = setTimeout(()=>{ el.textContent=''; }, 4000);
+}
+
+async function loadState(){
+  try{
+    const { docRef, getDoc } = await ensureFirebase();
+    const snap = await getDoc(docRef);
+    if(snap.exists()){
+      const data = snap.data();
+      if(data.baseRate) baseRate = data.baseRate;
+      if(data.coefs){ Object.keys(data.coefs).forEach(k=>{ if(CLASSES[k]) CLASSES[k].coef = data.coefs[k]; }); }
+      if(Array.isArray(data.customCars)) customCars = data.customCars;
+      if(Array.isArray(data.customWorks)) customWorks = data.customWorks;
+      if(data.workOverrides) workOverrides = data.workOverrides;
+    }
+  }catch(e){ showSaveStatus('Не удалось загрузить данные: ' + (e && e.message || e), true); }
+  renderFootnote();
+}
+
+async function persistState(){
+  const coefs = {}; Object.keys(CLASSES).forEach(k=> coefs[k] = CLASSES[k].coef);
+  try{
+    const { docRef, setDoc } = await ensureFirebase();
+    await setDoc(docRef, { baseRate, coefs, customCars, customWorks, workOverrides });
+    showSaveStatus('Сохранено');
+  }catch(e){ showSaveStatus('Ошибка сохранения: ' + (e && e.message || e), true); }
+}
+
+async function saveRatesToStorage(){ await persistState(); }
+async function saveCarsToStorage(){ await persistState(); }
+async function saveWorksToStorage(){ await persistState(); }
+async function saveOverridesToStorage(){ await persistState(); }
+
+function allCars(){ return BUILTIN_CARS.concat(customCars); }
+function allBrands(){ return [...new Set(allCars().map(c=>c[0]))].sort((a,b)=>a.localeCompare(b,'ru')); }
+function getWorks(){
+  const builtin = BUILTIN_WORKS.map((w,i)=>{
+    const raw = workOverrides[workKey('builtin', i)];
+    const ov = (raw && typeof raw === 'object') ? raw : (typeof raw === 'number' ? {hours: raw} : {});
+    return { category: w[0], name: (ov.name!=null ? ov.name : w[1]), hours: (ov.hours!=null ? ov.hours : w[2]), source:'builtin', idx:i, deleted: !!ov.deleted };
+  }).filter(w=>!w.deleted);
+  const custom = customWorks.map((w,i)=>({category:w[0], name:w[1], hours:w[2], source:'custom', idx:i}));
+  return builtin.concat(custom);
+}
+function renderFootnote(){
+  document.getElementById('footnote').innerHTML =
+    `В базе ${allCars().length} моделей и ${getWorks().length} видов работ. `+
+    `Всё, что вы добавляете или правите, сохраняется на сервере автоматически и доступно с любого устройства.`;
+}
+
+// ================= BRAND combo =================
+const brandSearch = document.getElementById('brandSearch');
+const brandResults = document.getElementById('brandResults');
+function renderBrandResults(query){
+  const q = query.trim().toLowerCase();
+  const brands = allBrands();
+  const matches = (q.length===0 ? brands : brands.filter(b=>b.toLowerCase().includes(q))).slice(0,80);
+  brandResults.innerHTML = matches.length ? "" : `<div class="empty-hint">Марка не найдена</div>`;
+  matches.forEach(b=>{
+    const row = document.createElement('div');
+    row.className='result-row';
+    row.innerHTML = `<span class="rname">${b}</span>`;
+    row.addEventListener('mousedown', (e)=>{ e.preventDefault();
+      selectedBrand = b; brandSearch.value = b; selectedCar = null;
+      brandResults.classList.remove('open');
+      modelSearch.value=''; modelSearch.focus();
+      renderCarResults(''); carResults.classList.add('open');
+      updateCalc();
+    });
+    brandResults.appendChild(row);
+  });
+}
+brandSearch.addEventListener('input', ()=>{ selectedBrand=null; selectedCar=null; renderBrandResults(brandSearch.value); brandResults.classList.add('open'); updateCalc(); });
+brandSearch.addEventListener('focus', ()=>{ brandSearch.select(); renderBrandResults(''); brandResults.classList.add('open'); });
+brandSearch.addEventListener('click', ()=>{ renderBrandResults(''); brandResults.classList.add('open'); });
+
+// ================= MODEL combo =================
+const modelSearch = document.getElementById('modelSearch');
+const carResults = document.getElementById('carResults');
+const CLASS_TAG_CSS = { econom:"econom", standard:"standard", business:"business", premium:"premium", electro:"electro" };
+function renderCarResults(query){
+  const q = query.trim().toLowerCase();
+  let pool = allCars();
+  if(selectedBrand) pool = pool.filter(c=>c[0]===selectedBrand);
+  const matches = pool.filter(([brand,model])=> (selectedBrand ? model : brand+" "+model).toLowerCase().includes(q)).slice(0,80);
+  carResults.innerHTML = matches.length ? "" : `<div class="empty-hint">Ничего не найдено — добавьте через «+ Марка/модель»</div>`;
+  matches.forEach(([brand,model,cls])=>{
+    const row = document.createElement('div');
+    row.className='result-row';
+    row.innerHTML = `<span class="rname">${selectedBrand ? model : brand+" "+model}</span><span class="tag ${CLASS_TAG_CSS[cls]}">${CLASSES[cls].label}</span>`;
+    row.addEventListener('mousedown', (e)=>{ e.preventDefault();
+      selectedCar = {brand, model, cls};
+      selectedBrand = brand; brandSearch.value = brand;
+      modelSearch.value = model;
+      carResults.classList.remove('open');
+      updateCalc();
+    });
+    carResults.appendChild(row);
+  });
+}
+modelSearch.addEventListener('input', ()=>{ selectedCar=null; renderCarResults(modelSearch.value); carResults.classList.add('open'); updateCalc(); });
+modelSearch.addEventListener('focus', ()=>{ modelSearch.select(); renderCarResults(''); carResults.classList.add('open'); });
+modelSearch.addEventListener('click', ()=>{ renderCarResults(''); carResults.classList.add('open'); });
+
+// ================= WORK combo =================
+const workSearch = document.getElementById('workSearch');
+const workResults = document.getElementById('workResults');
+let editingKey = null;
+function renderWorkResults(query){
+  const q = query.trim().toLowerCase();
+  const works = getWorks();
+  const matches = (q.length===0 ? works : works.filter(w => (w.category+" "+w.name).toLowerCase().includes(q))).slice(0,80);
+  workResults.innerHTML = "";
+  if(matches.length===0){ workResults.innerHTML = `<div class="empty-hint">Ничего не найдено — добавьте через «+ Вид работы»</div>`; return; }
+  matches.forEach(w=>{
+    const k = workKey(w.source, w.idx);
+    if(editingKey === k){
+      const row = document.createElement('div');
+      row.className='edit-row';
+      row.innerHTML = `<input type="text" value="${escapeAttr(w.name)}" id="editNameInput" style="flex:1;min-width:70px;width:auto;">`+
+                      `<input type="number" step="0.1" min="0" value="${w.hours}" id="editHoursInput">`+
+                      `<button class="small primary" id="editSaveBtn" title="Сохранить">✓</button>`+
+                      `<button class="small ghost" id="editDeleteBtn" title="Удалить вид работы">🗑</button>`+
+                      `<button class="small ghost" id="editCancelBtn" title="Отмена">✕</button>`;
+      workResults.appendChild(row);
+      document.getElementById('editSaveBtn').addEventListener('mousedown', async (e)=>{ e.preventDefault();
+        const newName = document.getElementById('editNameInput').value.trim();
+        const newHours = parseFloat(document.getElementById('editHoursInput').value);
+        if(newName && !isNaN(newHours) && newHours>0){
+          if(w.source==='builtin'){
+            const existing = workOverrides[k];
+            const base = (existing && typeof existing==='object') ? existing : {};
+            workOverrides[k] = { ...base, name: newName, hours: newHours };
+            await saveOverridesToStorage();
+          } else {
+            customWorks[w.idx][1] = newName;
+            customWorks[w.idx][2] = newHours;
+            await saveWorksToStorage();
+          }
+          if(selectedWork && selectedWork.category===w.category && selectedWork.name===w.name){
+            selectedWork.name = newName; selectedWork.hours = newHours; workSearch.value = newName;
+          }
+        }
+        editingKey = null; renderWorkResults(''); updateCalc();
+      });
+      document.getElementById('editDeleteBtn').addEventListener('mousedown', async (e)=>{ e.preventDefault();
+        if(!confirm(`Удалить вид работы «${w.name}»?`)) return;
+        if(w.source==='builtin'){
+          const existing = workOverrides[k];
+          const base = (existing && typeof existing==='object') ? existing : {};
+          workOverrides[k] = { ...base, deleted:true };
+          await saveOverridesToStorage();
+        } else {
+          customWorks.splice(w.idx,1);
+          await saveWorksToStorage();
+        }
+        if(selectedWork && selectedWork.category===w.category && selectedWork.name===w.name){
+          selectedWork = null; workSearch.value = '';
+        }
+        editingKey = null; renderWorkResults(''); renderFootnote(); updateCalc();
+      });
+      document.getElementById('editCancelBtn').addEventListener('mousedown', (e)=>{ e.preventDefault(); editingKey=null; renderWorkResults(workSearch.value); });
+      return;
+    }
+    const row = document.createElement('div');
+    row.className='result-row';
+    row.innerHTML = `<span class="rname">${escapeHtml(w.name)}</span><span class="rmeta">${escapeHtml(w.category)} · ${w.hours} н/ч <button class="icon-btn ghost" title="Изменить название/нормо-часы или удалить">✎</button></span>`;
+    row.querySelector('.icon-btn').addEventListener('mousedown', (e)=>{ e.preventDefault(); e.stopPropagation(); editingKey = k; renderWorkResults(workSearch.value); });
+    row.addEventListener('mousedown', (e)=>{ e.preventDefault();
+      selectedWork = {category:w.category, name:w.name, hours:w.hours};
+      workSearch.value = w.name;
+      workResults.classList.remove('open');
+      updateCalc();
+    });
+    workResults.appendChild(row);
+  });
+}
+workSearch.addEventListener('input', ()=>{ selectedWork=null; editingKey=null; renderWorkResults(workSearch.value); workResults.classList.add('open'); updateCalc(); });
+workSearch.addEventListener('focus', ()=>{ workSearch.select(); editingKey=null; renderWorkResults(''); workResults.classList.add('open'); });
+workSearch.addEventListener('click', ()=>{ editingKey=null; renderWorkResults(''); workResults.classList.add('open'); });
+
+// close dropdowns on outside click
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#brandCombo')) brandResults.classList.remove('open');
+  if(!e.target.closest('#modelCombo')) carResults.classList.remove('open');
+  if(!e.target.closest('#workCombo')) workResults.classList.remove('open');
+});
+
+// ================= Calculation =================
+const partsCostEl = document.getElementById('partsCost');
+const partsMarkupEl = document.getElementById('partsMarkup');
+[partsCostEl, partsMarkupEl].forEach(el=> el.addEventListener('input', updateCalc));
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU') + ' грн'; }
+function updateCalc(){
+  document.getElementById('sumCar').textContent = selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : "— не выбран —";
+  document.getElementById('sumClass').textContent = selectedCar ? CLASSES[selectedCar.cls].label : "—";
+  document.getElementById('sumWork').textContent = selectedWork ? selectedWork.name : "— не выбрана —";
+  document.getElementById('sumHours').textContent = selectedWork ? selectedWork.hours + " н/ч" : "—";
+  let rate=null, labor=0;
+  if(selectedCar){ rate = baseRate * CLASSES[selectedCar.cls].coef; document.getElementById('calcRate').textContent = fmt(rate)+"/ч"; }
+  else document.getElementById('calcRate').textContent = "—";
+  if(selectedCar && selectedWork){ labor = rate*selectedWork.hours; document.getElementById('calcLabor').textContent = fmt(labor); }
+  else document.getElementById('calcLabor').textContent = "—";
+  const partsCost = parseFloat(partsCostEl.value)||0;
+  const markup = parseFloat(partsMarkupEl.value)||0;
+  const partsTotal = partsCost*(1+markup/100);
+  const total = labor+partsTotal;
+  document.getElementById('calcTotal').textContent = (selectedCar && selectedWork) ? fmt(total) : fmt(partsTotal);
+}
+
+// ================= Rates modal =================
+const ratesOverlay = document.getElementById('ratesOverlay');
+document.getElementById('btnRates').addEventListener('click', openRatesModal);
+document.getElementById('closeRates').addEventListener('click', ()=> ratesOverlay.classList.remove('open'));
+function openRatesModal(){
+  document.getElementById('baseRate').value = baseRate;
+  const grid = document.getElementById('ratesGrid');
+  grid.innerHTML = `<div class="rh">Класс</div><div class="rh">Коэфф.</div><div class="rh">Ставка</div>`;
+  Object.entries(CLASSES).forEach(([key,c])=>{
+    const label=document.createElement('div'); label.textContent=c.label;
+    const coefInput=document.createElement('input'); coefInput.type='number'; coefInput.step='0.1'; coefInput.min='0';
+    coefInput.value=c.coef; coefInput.dataset.classKey=key; coefInput.className='coef-input';
+    const preview=document.createElement('div'); preview.className='v'; preview.style.fontFamily="'IBM Plex Mono',monospace";
+    preview.textContent = fmt(baseRate*c.coef);
+    coefInput.addEventListener('input', ()=>{ preview.textContent = fmt((parseFloat(document.getElementById('baseRate').value)||0)*(parseFloat(coefInput.value)||0)); });
+    grid.appendChild(label); grid.appendChild(coefInput); grid.appendChild(preview);
+  });
+  document.getElementById('baseRate').oninput = ()=>{ Array.from(document.querySelectorAll('.coef-input')).forEach(inp=> inp.dispatchEvent(new Event('input'))); };
+  ratesOverlay.classList.add('open');
+}
+document.getElementById('saveRates').addEventListener('click', async ()=>{
+  baseRate = parseFloat(document.getElementById('baseRate').value)||baseRate;
+  Array.from(document.querySelectorAll('.coef-input')).forEach(inp=>{ const key=inp.dataset.classKey; CLASSES[key].coef = parseFloat(inp.value)||CLASSES[key].coef; });
+  await saveRatesToStorage(); ratesOverlay.classList.remove('open'); updateCalc();
+});
+
+// ================= Add car modal =================
+const carOverlay = document.getElementById('carOverlay');
+document.getElementById('btnAddCar').addEventListener('click', ()=>{
+  document.getElementById('newBrand').value=""; document.getElementById('newModel').value=""; document.getElementById('carStatus').textContent="";
+  const sel=document.getElementById('newCarClass'); sel.innerHTML = Object.entries(CLASSES).map(([k,c])=>`<option value="${k}">${c.label}</option>`).join("");
+  carOverlay.classList.add('open');
+});
+document.getElementById('closeCar').addEventListener('click', ()=> carOverlay.classList.remove('open'));
+document.getElementById('saveCar').addEventListener('click', async ()=>{
+  const brand=document.getElementById('newBrand').value.trim(); const model=document.getElementById('newModel').value.trim();
+  const cls=document.getElementById('newCarClass').value;
+  if(!brand||!model){ document.getElementById('carStatus').textContent="Заполните марку и модель"; return; }
+  customCars.push([brand,model,cls]); await saveCarsToStorage(); renderFootnote();
+  document.getElementById('carStatus').textContent="Добавлено!";
+  setTimeout(()=> carOverlay.classList.remove('open'), 500);
+});
+
+// ================= Add work modal =================
+const workOverlay = document.getElementById('workOverlay');
+document.getElementById('btnAddWork').addEventListener('click', ()=>{
+  document.getElementById('newCategory').value=""; document.getElementById('newWorkName').value=""; document.getElementById('newHours').value=""; document.getElementById('workStatus').textContent="";
+  workOverlay.classList.add('open');
+});
+document.getElementById('closeWork').addEventListener('click', ()=> workOverlay.classList.remove('open'));
+document.getElementById('saveWork').addEventListener('click', async ()=>{
+  const cat=document.getElementById('newCategory').value.trim(); const name=document.getElementById('newWorkName').value.trim();
+  const hours=parseFloat(document.getElementById('newHours').value);
+  if(!cat||!name||!hours){ document.getElementById('workStatus').textContent="Заполните все поля"; return; }
+  customWorks.push([cat,name,hours]); await saveWorksToStorage(); renderFootnote();
+  document.getElementById('workStatus').textContent="Добавлено!";
+  setTimeout(()=> workOverlay.classList.remove('open'), 500);
+});
+
+[ratesOverlay, carOverlay, workOverlay].forEach(ov=>{ ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('open'); }); });
+
+loadState().then(updateCalc);
+</script>
+</body>
+</html>
